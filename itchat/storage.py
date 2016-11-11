@@ -1,4 +1,8 @@
 import os, time, copy
+try:
+    import Queue
+except ImportError:
+    import queue as Queue
 
 class Storage:
     def __init__(self):
@@ -7,7 +11,7 @@ class Storage:
         self.memberList        = []
         self.mpList            = []
         self.chatroomList      = []
-        self.msgList           = []
+        self.msgList           = Queue.Queue(-1)
         self.lastInputUserName = None
     def dumps(self):
         return {

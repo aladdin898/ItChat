@@ -1,9 +1,13 @@
 import time
+try:
+    import Queue
+except ImportError:
+    import queue as Queue
 
 from .client import client
 from . import content # this is for creating pyc
 
-__version__ = '1.1.19'
+__version__ = '1.1.21'
 
 __client = client()
 HOT_RELOAD = False
@@ -86,17 +90,20 @@ def configured_reply():
         I haven't found a better solution here
         The main problem I'm worrying about is the mismatching of new friends added on phone
         If you have any good idea, pleeeease report an issue. I will be more than grateful. '''
-    if not __client.storageClass.msgList: return
-    msg = __client.storageClass.msgList.pop()
-    if '@@' in msg['FromUserName']:
-        replyFn = __functionDict['GroupChat'].get(msg['Type'])
-        if replyFn: send(replyFn(msg), msg.get('FromUserName'))
-    elif search_mps(userName=msg['FromUserName']):
-        replyFn = __functionDict['MpChat'].get(msg['Type'])
-        if replyFn: send(replyFn(msg), msg.get('FromUserName'))
+    try:
+        msg = __client.msgList.get(timeout=1)
+    except Queue.Empty:
+        pass
     else:
-        replyFn = __functionDict['FriendChat'].get(msg['Type'])
-        if replyFn: send(replyFn(msg), msg.get('FromUserName'))
+        if '@@' in msg['FromUserName']:
+            replyFn = __functionDict['GroupChat'].get(msg['Type'])
+            if replyFn: send(replyFn(msg), msg.get('FromUserName'))
+        elif search_mps(userName=msg['FromUserName']):
+            replyFn = __functionDict['MpChat'].get(msg['Type'])
+            if replyFn: send(replyFn(msg), msg.get('FromUserName'))
+        else:
+            replyFn = __functionDict['FriendChat'].get(msg['Type'])
+            if replyFn: send(replyFn(msg), msg.get('FromUserName'))
 
 def msg_register(msgType, isFriendChat=False, isGroupChat=False, isMpChat=False):
     ''' a decorator constructor
@@ -119,9 +126,7 @@ def run(debug=True):
     print('Start auto replying')
     __client.debug = debug
     try:
-        while 1:
-            configured_reply()
-            time.sleep(.3)
+        while 1: configured_reply()
     except KeyboardInterrupt:
         if HOT_RELOAD: __client.dump_login_status(HOT_RELOAD_DIR)
         print('Bye~')
